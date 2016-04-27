@@ -15,9 +15,10 @@ Added timingTest software
 
 Needs to be fully tested on gimbal
 
-##
+## Contacts
 
 Code written by Xi Chen for A-team Senior Design Project
+
 Contact Xi about bugs and other issues
 
 
