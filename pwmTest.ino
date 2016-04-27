@@ -14,20 +14,22 @@
 #include <Servo.h> 
 #include <SimpleTimer.h>
 
-#define Pitch 9
-#define Roll 10
+//Actual roll in real life
+#define Roll 9
+//Actual Pitch in real life
+#define Pitch 10
 #define Mode 11
 #define SERVO 12
 SimpleTimer timer;
-Servo pitchServo;
+Servo rollServo;
 
-int PitchMode = 0;
+int RollMode = 0;
 //0--PWM OUTPUT
 //1--SERVO OUTPUT
 
 int curState = 0;
 int mode = 1;
-//1--Pitch Control
+//1--Roll Control
 //2--Locked Mode
 //3--Dual Control
 
@@ -35,18 +37,19 @@ int pitch = 0;
 int roll = 0;
 
 void setup() {
+  
   Serial.begin(9600);
   Serial.println(F("Initializing......"));
   pinMode(Roll, OUTPUT);
   pinMode(Mode, OUTPUT);
   pinMode(Pitch,OUTPUT);
  
-  if (PitchMode==1){
-    pitchServo.attach(SERVO);
-    Serial.println(F("Pitch Output Set to Servo"));
+  if (RollMode==1){
+    rollServo.attach(SERVO);
+    Serial.println(F("Roll Output Set to Servo"));
   }
   else{
-    Serial.println(F("Pitch Output Set to PWM"));
+    Serial.println(F("Roll Output Set to PWM"));
   }
 
   modeChange(1);
@@ -107,15 +110,15 @@ void loop() {
       }
       break;
 
-    case 2://Roll Control
+    case 2://Pitch Control
       if(mode ==2 ){
         Serial.print(F("ACCESS DENIED UNDER CURRENT MODE"));
         curState = 0;
       }
       else if(userInput<=255&&userInput>=0){
-        roll = userInput;
-        Serial.print(F("Roll Output Changed to "));Serial.println(roll);
-        analogWrite(Roll,roll);
+        pitch = userInput;
+        Serial.print(F("Pitch Output Changed to "));Serial.println(pitch);
+        analogWrite(Pitch,pitch);
         curState = 0;
       }
       else{
@@ -123,25 +126,25 @@ void loop() {
       }
       break;
 
-    case 3://Pitch Control
+    case 3://Roll Control
       if(mode == 2 || mode ==1){
         Serial.println(F("ACCESS DENIED UNDER CURRENT MODE"));
         curState = 0;
       }
-      else if (PitchMode==0){
+      else if (RollMode==0){
         if (userInput<=255&&userInput>=0){
-          pitch = userInput;
-          Serial.print(F("Pitch Output Changed to (PWM) "));Serial.println(pitch);
+          roll = userInput;
+          Serial.print(F("Roll Output Changed to (PWM) "));Serial.println(roll);
           curState = 0;
-          analogWrite(Pitch,pitch);
+          analogWrite(Roll,roll);
         }
       }
-      else if (PitchMode==1){
+      else if (RollMode==1){
         if (userInput<=180&&userInput>=0){
-          pitch = userInput;
-          Serial.print(F("Pitch OutputChanged to (degree) "));Serial.println(pitch);
+          roll = userInput;
+          Serial.print(F("Roll OutputChanged to (degree) "));Serial.println(roll);
           curState = 0;
-          pitchServo.write(pitch);
+          rollServo.write(roll);
         }
       }
       else{
@@ -149,18 +152,18 @@ void loop() {
       }
       break;
 
-    case 4://Pitch OUTPUT MODE SET
+    case 4://Roll OUTPUT MODE SET
       if(userInput == 0){
-        PitchMode = 0;
-        pitchServo.detach();
+        RollMode = 0;
+        rollServo.detach();
         modeChange(1);
-        Serial.println(F("PITCH OUTPUT SET TO PWM"));
+        Serial.println(F("ROLL OUTPUT SET TO PWM"));
       }
       else if(userInput == 1){
-        PitchMode = 1;
-        pitchServo.attach(SERVO);
+        RollMode = 1;
+        rollServo.attach(SERVO);
         modeChange(1);
-        Serial.println(F("PITCH OUTPUT SET TO SERVO"));
+        Serial.println(F("ROLL OUTPUT SET TO SERVO"));
       }
       else{
         Serial.println(F("INVALID INPUT"));
@@ -174,19 +177,19 @@ void printMessage(int state){
   switch (state){
      case 0:
        Serial.println(F("-------------------------------------------------------------------------------"));
-       Serial.println(F("Please Type in Command:\n0--DisplayCurrentOutput\n1--Change Mode\n2--Change Roll Output\n3--Change Pitch Output\n4--Change Pitch Mode(PWM/SERVO)"));
+       Serial.println(F("Please Type in Command:\n0--DisplayCurrentOutput\n1--Change Mode\n2--Change Pitch Output\n3--Change Roll Output\n4--Change Roll Mode(PWM/SERVO)"));
        break;
      case 2:
-       Serial.println(F("Choose Roll input(0-255)"));
+       Serial.println(F("Choose Pitch input(0-255)"));
        break;
      case 3:
-       Serial.println(F("Choose Pitch input(0-255 for pwm,0-180 for servo)"));
+       Serial.println(F("Choose Roll input(0-255 for pwm,0-180 for servo)"));
        break;
      case 1:
-       Serial.println(F("Choose Mode:\n1--Pitch\n2--Lock\n3--Dual"));
+       Serial.println(F("Choose Mode:\n1--Roll\n2--Lock\n3--Dual"));
        break;
      case 4:
-       Serial.println(F("Choose Pitch Output Mode(All output will reset after change):\n0--PWM\n1--SERVO"));
+       Serial.println(F("Choose Roll Output Mode(All output will reset after change):\n0--PWM\n1--SERVO"));
        break;
   }
 }
@@ -196,7 +199,7 @@ void modeChange(int mode){
   switch (mode){
     case 1:
       analogWrite(Mode,0);
-      Serial.println(F("Mode Switched to 1 (Roll Control Mode)"));
+      Serial.println(F("Mode Switched to 1 (Pitch Control Mode)"));
       pitch = 0;
       roll = 0;
       clearOutput();
@@ -209,7 +212,7 @@ void modeChange(int mode){
       clearOutput();
       break;
     case 3:
-      analogWrite(Mode,26);
+      analogWrite(Mode,27);
       Serial.println(F("Mode Switched to 3 (Pitch/Roll Control Mode)"));
       pitch = 0;
       roll = 0;
@@ -222,20 +225,15 @@ void modeChange(int mode){
 }
 
 void clearOutput(){
-  if(PitchMode ==0){
     analogWrite(pitch,0);
     analogWrite(roll,0);
-  }
-  else{
-    pitchServo.write(0);
-    analogWrite(roll,0);
-  }
+    rollServo.write(0);
 }
 
 void displayStatus(){
   switch (mode){
     case 1:
-      Serial.println(F("Current Mode: Pitch Control"));
+      Serial.println(F("Current Mode: Roll Control"));
       break;
     case 2:
       Serial.println(F("Current Mode: Locked Mode"));
@@ -244,13 +242,13 @@ void displayStatus(){
       Serial.println(F("Current Mode: Dual Control"));
       break;
   }
-  Serial.print(F("Current Roll Output: "));Serial.println(roll);
-  switch (PitchMode){
+  Serial.print(F("Current Pitch Output: "));Serial.println(pitch);
+  switch (RollMode){
     case 0:
-      Serial.print(F("Current Pitch Output (PWM): "));Serial.println(pitch);
+      Serial.print(F("Current Roll Output (PWM): "));Serial.println(roll);
       break;
     case 1:
-      Serial.print(F("Current Pitch Output (SERVO,degree): "));Serial.println(pitch);
+      Serial.print(F("Current Roll Output (SERVO,degree): "));Serial.println(roll);
       break;
   } 
 }
