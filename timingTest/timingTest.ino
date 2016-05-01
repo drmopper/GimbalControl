@@ -11,21 +11,30 @@
 #include <Servo.h> 
 #include <SimpleTimer.h>
 
-#define Roll 9
+#define Yaw 9
 #define Pitch 10
+#define BoardTwo 12
+
 SimpleTimer timer;
+Servo pitchServo;
+Servo yawServo;
 
 int curState = 0;
 
+
 int pitch = 0;
-int roll = 0;
+int yaw = 0;
 int timing = 0;
 void setup() {
   
   Serial.begin(9600);
   Serial.println(F("Initializing......"));
-  pinMode(Roll, OUTPUT);
-  pinMode(Pitch,OUTPUT);
+  pinMode(BoardTwo,OUTPUT);
+  digitalWrite(BoardTwo,LOW);
+  pitchServo.attach(Pitch);
+  yawServo.attach(Yaw);
+  pitchServo.write(95);
+  yawServo.write(90);
   
   Serial.println(F("---------------------------------------------------------------"));
   Serial.println(F("---------------------------------------------------------------"));
@@ -60,16 +69,20 @@ void loop() {
       else if(userInput == 2){
         curState = 2;
       }
+      else if(userInput == 3){
+        modeReset();
+      }
       else{
         Serial.println(F("INVALID OPTION"));
       }
       break;
 
     case 1:
-      if(userInput<=255 && userInput >=0){
+      if(userInput<=180 && userInput >=0){
         pitch = userInput;
-        Serial.print(F("Pitch PWM set to: "));Serial.println(pitch);
-        curState = 3;
+        Serial.print(F("Pitch Servo set to: "));Serial.println(pitch);
+        pitchServo.write(pitch);
+        curState = 0;
       }
       else{
         Serial.println(F("Invalid Input"));
@@ -78,23 +91,10 @@ void loop() {
       break;    
       
     case 2:
-      if(userInput<=255 && userInput >=0){
-        roll = userInput;
-        Serial.print(F("Roll PWM set to: "));Serial.println(roll);
+      if(userInput<=180 && userInput >=0){
+        yaw = userInput;
+        Serial.print(F("Yaw Servo set to: "));Serial.println(yaw);
         curState = 4;
-      }
-      else{
-        Serial.println(F("Invalid Input"));
-        curState = 0;
-      }
-      break;
-
-    case 3:
-      if(userInput<=5000 && userInput >=0){
-        timing = userInput;
-        Serial.print(F("Pitch output time set to: "));Serial.println(timing);
-        timingOutput(Pitch,pitch,timing);
-        curState = 0;
       }
       else{
         Serial.println(F("Invalid Input"));
@@ -103,10 +103,10 @@ void loop() {
       break;
       
     case 4:
-      if(userInput<=5000 && userInput >=0){
+      if(userInput<=20000 && userInput >=0){
         timing = userInput;
         Serial.print(F("Roll output time set to: "));Serial.println(timing);
-        timingOutput(Roll,roll,timing);
+        timingOutput(Yaw,yaw,timing);
         curState = 0;
       }
       else{
@@ -121,7 +121,7 @@ void printMessage(int state){
   switch (state){
      case 0:
        Serial.println(F("-------------------------------------------------------------------------------"));
-       Serial.println(F("Please Type in Command:\n0--DisplayCurrentOutput\n1--Time Pitch Output\n2--Time Roll Output\n"));
+       Serial.println(F("Please Type in Command:\n0--DisplayCurrentOutput\n1--Time Pitch Output\n2--Time Roll Output\n3--Mode Reset\n"));
        break;
      case 1:
        Serial.println(F("Choose Pitch output(0-255)"));
@@ -129,33 +129,46 @@ void printMessage(int state){
      case 2:
        Serial.println(F("Choose Roll output(0-255)"));
        break;
-     case 3:
-       Serial.println(F("Choose Pitch output duration(0-5000ms)"));
-       break;
      case 4:
-       Serial.println(F("Choose Roll output duration(0-5000ms)"));
+       Serial.println(F("Choose Roll output duration(0-20000ms)"));
        break;
   }
 }
 
-void timingOutput(int pin,int pwm,int timing){
+void timingOutput(int pin,int output,int timing){
   Serial.print(F("Start OUTPUTTING for "));Serial.print(timing);Serial.println(F(" ms"));
-  analogWrite(pin,pwm);
-  delay(timing);
+  if(pin == Pitch){
+    pitchServo.write(output);
+    delay(timing);
+    pitchServo.write(95);
+    Serial.println(F("End of OUTPUTTING Pitch, all output reset to zero"));
+  }
+  else{
+    yawServo.write(output);
+    delay(timing);
+    yawServo.write(90);
+    Serial.println(F("End of OUTPUTTING Yaw, all output reset to zero"));
+  }
   clearOutput();
-  Serial.println(F("End of OUTPUTTING, all output reset to zero"));
 }
 
 void clearOutput(){
-    analogWrite(Pitch,0);
-    analogWrite(Roll,0);
     timing = 0;
     pitch = 0;
-    roll = 0;
+    yaw = 0;
+}
+
+void modeReset(){
+  Serial.println(F("Resetting, Please wait for reset to complete..."));
+  digitalWrite(BoardTwo,HIGH);
+  delay(1000);
+  digitalWrite(BoardTwo,LOW);
+  delay(3000);
+  Serial.println(F("Mode Reset Complete"));
 }
 
 void displayStatus(){
   Serial.print(F("Current Pitch Output: "));Serial.println(pitch);
-  Serial.print(F("Current Roll Output (PWM): "));Serial.println(roll);
+  Serial.print(F("Current Roll Output (PWM): "));Serial.println(yaw);
 }
 
