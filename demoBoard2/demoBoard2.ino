@@ -12,7 +12,7 @@
 
 #define ModePin 10
 #define BoardOne 12
-#define DualMode 50
+#define DualMode 61
 #define PitchMode 150
 SimpleTimer timer;
 Servo modeServo;

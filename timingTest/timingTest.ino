@@ -161,9 +161,8 @@ void clearOutput(){
 void modeReset(){
   Serial.println(F("Resetting, Please wait for reset to complete..."));
   digitalWrite(BoardTwo,HIGH);
-  delay(1000);
+  delay(5000);
   digitalWrite(BoardTwo,LOW);
-  delay(3000);
   Serial.println(F("Mode Reset Complete"));
 }
 
