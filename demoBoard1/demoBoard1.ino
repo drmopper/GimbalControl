@@ -9,7 +9,6 @@
  */
 #include <avr/pgmspace.h>
 #include <Servo.h> 
-#include <SimpleTimer.h>
 
 #define YawPin 9
 #define PitchPin 10
@@ -21,8 +20,23 @@
 #define YawCCWCycleTime 10120
 #define YawCWCycleTime 10120
 
+#define MAX_BUFF (64)
+#define HEADER_SIZE (2)
+byte ifBuff[MAX_BUFF];
 
-SimpleTimer timer;
+enum CmdId
+{
+  CMD_SET_ANGLE = 'A',
+  CMD_SET_MODE = 'M'
+};
+
+enum GimbalMode
+{
+  MODE_INVALID = 0,
+  MODE_RESET = 'R'
+};
+byte gMode = MODE_INVALID;
+
 Servo pitchServo;
 Servo yawServo;
 
@@ -35,12 +49,16 @@ boolean shouldReset;
 
 void setup() {
   Serial.begin(9600);
+  Serial.setTimeout(1000);
+  
   pitchServo.attach(PitchPin);
   yawServo.attach(YawPin);
+  
   currentPitch = 0;//zero points straight down
   currentYaw = 0;//zero points straight forward
   inputPitch = 0;
   inputYaw = 0;
+  
   pitchServo.write(pitchMap[currentPitch]);//set pitch position to 90
   yawServo.write(YawHalt);//halt any yaw movement
 }
@@ -49,6 +67,7 @@ void loop() {
   //wait for input and read input from serial
   //extract info and parse to Int to inputPitch, inputYaw, and shouldReset
   //using readInput()
+  readInput();
   turnPitch();
   turnYaw();
   currentPitch = inputPitch;
@@ -59,8 +78,74 @@ void loop() {
   shouldReset = false;
 }
 
+float clamp(float val, float minVal, float maxVal) {
+  if(val < minVal) return minVal;
+  if(val > maxVal) return maxVal;
+  return val;
+}
+
 void readInput(){
-  
+  // read interface header
+  byte rsize = Serial.readBytes(ifBuff, HEADER_SIZE);
+  if (rsize == 0) {
+    //Serial.println("Timeout");
+    return;
+  } else if(rsize < HEADER_SIZE) {
+    Serial.print("Invalid Header Read: ");
+    Serial.println((int)rsize);
+    return;
+  }
+
+  // parse the header and read the data
+  byte id = ifBuff[0];
+  byte dsize = ifBuff[1];
+  if(dsize > MAX_BUFF) {
+     Serial.print("Invalid Size: ");
+     Serial.println((int)dsize);
+  }
+  rsize = Serial.readBytes(ifBuff, dsize);
+  if(rsize < dsize) {
+    Serial.print("Invalid Data Read: ");
+    Serial.println((int)rsize);
+    return;
+  }
+
+  // parse the packets based on the id
+  switch(id) {
+    case CMD_SET_ANGLE: parseAngles(); break;
+    case CMD_SET_MODE: parseMode(); break;
+    default:
+      Serial.print("Invalid Cmd Id: ");
+      Serial.println((int)id);
+      break;
+  }
+}
+
+void parseAngles() {
+  float pitch = *(float*)ifBuff;
+  float yaw = *(float*)&ifBuff[sizeof(float)];
+  pitch = clamp(pitch, -90.0f, 90.0f);
+  yaw = clamp(yaw, 0.0f, 360.0f);
+  inputPitch = (int)pitch;
+  inputYaw = (int)yaw;
+  Serial.print("Set Angle: (");
+  Serial.print(inputPitch);
+  Serial.print(", ");
+  Serial.print(inputYaw);
+  Serial.println(")");
+}
+
+void parseMode() {
+  switch((gMode = ifBuff[0])) {
+    case MODE_RESET:
+      shouldReset = true;
+      Serial.println("RESET");
+      break;
+    default:
+      gMode = MODE_INVALID;
+      Serial.println("Invalid Mode");
+      break;
+  }
 }
 
 void resetMode(){
